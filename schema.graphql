@@ -1,6 +1,18 @@
-type ExampleEntity @entity {
-  id: Bytes!
-  count: BigInt!
+type TransferEvent @entity {
+  id: ID!
+  from: Bytes! # address
+  to: Bytes! # address
+  value: BigInt!
+}
+
+type ApprovalEvent @entity {
+  id: ID!
   owner: Bytes! # address
   spender: Bytes! # address
+  value: BigInt!
+}
+
+type User @entity {
+  id: Bytes! # address
+  balance: BigInt! # token balance
 }

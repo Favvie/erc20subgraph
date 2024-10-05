@@ -1,56 +1,51 @@
+import { Transfer } from './../generated/Web3CXI/Web3CXI';
 import { BigInt } from "@graphprotocol/graph-ts"
-import { Web3CXI, Approval, Transfer } from "../generated/Web3CXI/Web3CXI"
-import { ExampleEntity } from "../generated/schema"
+import { Web3CXI, Approval } from "../generated/Web3CXI/Web3CXI"
+import { ApprovalEvent, TransferEvent, User } from "../generated/schema"
 
 export function handleApproval(event: Approval): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from)
+	// Create a unique ID for the approval event
+	let id = event.transaction.hash.toHex() + "-" + event.logIndex.toString();
 
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from)
+	// Create a new ApprovalEvent entity
+	let entity = new ApprovalEvent(id);
 
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
-  }
-
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
-
-  // Entity fields can be set based on event parameters
-  entity.owner = event.params.owner
-  entity.spender = event.params.spender
-
-  // Entities can be written to the store with `.save()`
+	// Set the entity fields based on the event parameters
+	entity.owner = event.params.owner;
+	entity.spender = event.params.spender;
+	entity.value = event.params.value;
+  
   entity.save()
 
-  // Note: If a handler doesn't require existing field values, it is faster
-  // _not_ to load the entity from the store. Instead, create it fresh with
-  // `new Entity(...)`, set the fields that should be updated and save the
-  // entity back to the store. Fields that were not set or unset remain
-  // unchanged, allowing for partial updates to be applied.
-
-  // It is also possible to access smart contracts from mappings. For
-  // example, the contract that has emitted the event can be connected to
-  // with:
-  //
-  // let contract = Contract.bind(event.address)
-  //
-  // The following functions can then be called on this contract to access
-  // state variables and other data:
-  //
-  // - contract.allowance(...)
-  // - contract.approve(...)
-  // - contract.balanceOf(...)
-  // - contract.decimals(...)
-  // - contract.name(...)
-  // - contract.owner(...)
-  // - contract.symbol(...)
-  // - contract.totalSupply(...)
-  // - contract.transfer(...)
-  // - contract.transferFrom(...)
 }
 
-export function handleTransfer(event: Transfer): void {}
+export function handleTransfer(event: Transfer): void {
+	// Create a unique ID for the approval event
+	let id = event.transaction.hash.toHex() + "-" + event.logIndex.toString();
+
+	// Create a new TransferEvent entity
+	let entity = new TransferEvent(id);
+
+	// Set the entity fields based on the event parameters
+	entity.from = event.params.from;
+	entity.to = event.params.to;
+	entity.value = event.params.value;
+
+  entity.save();
+  
+  let fromUser = User.load(event.params.from)
+  if (fromUser == null) {
+    fromUser = new User(event.params.from)
+    fromUser.balance = BigInt.fromI32(0)
+  } 
+  fromUser.balance = fromUser.balance.minus(event.params.value)
+  fromUser.save()
+
+  let toUser = User.load(event.params.to)
+  if (toUser == null) {
+    toUser = new User(event.params.to)
+    toUser.balance = BigInt.fromI32(0)
+  }
+  toUser.balance = toUser.balance.plus(event.params.value);
+	toUser.save();
+}

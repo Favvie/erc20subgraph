@@ -1,5 +1,5 @@
 import { Transfer } from './../generated/Web3CXI/Web3CXI';
-import { BigInt } from "@graphprotocol/graph-ts"
+import { Address, BigInt } from "@graphprotocol/graph-ts"
 import { Web3CXI, Approval } from "../generated/Web3CXI/Web3CXI"
 import { ApprovalEvent, TransferEvent, User } from "../generated/schema"
 
@@ -34,18 +34,54 @@ export function handleTransfer(event: Transfer): void {
   entity.save();
   
   let fromUser = User.load(event.params.from)
+
   if (fromUser == null) {
     fromUser = new User(event.params.from)
     fromUser.balance = BigInt.fromI32(0)
   } 
-  fromUser.balance = fromUser.balance.minus(event.params.value)
-  fromUser.save()
 
-  let toUser = User.load(event.params.to)
-  if (toUser == null) {
-    toUser = new User(event.params.to)
-    toUser.balance = BigInt.fromI32(0)
+  let zeroAddress = Address.fromString("0x0000000000000000000000000000000000000000")
+
+  if (event.params.from.equals(zeroAddress) ) {
+    // Handle the case where the user is address zero
+    let toUser = User.load(event.params.to)
+    if (toUser == null) {
+      toUser = new User(event.params.to)
+      toUser.balance = BigInt.fromI32(0)
+    }
+    toUser.balance = toUser.balance.plus(event.params.value)
+    toUser.save()
+
+  } else if (event.params.to.equals(zeroAddress)) {
+    let fromUser = User.load(event.params.from)
+    if (fromUser == null) {
+      fromUser = new User(event.params.from)
+      fromUser.balance = BigInt.fromI32(0)
+    }
+    fromUser.balance = fromUser.balance.minus(event.params.value);
+    fromUser.save()
+  } else {
+    let fromUser = User.load(event.params.to);
+		if (fromUser == null) {
+			fromUser = new User(event.params.to);
+			fromUser.balance = BigInt.fromI32(0);
+		}
+    
+    fromUser.balance = fromUser.balance.minus(event.params.value);
+    fromUser.save();
+    
+    let toUser = User.load(event.params.to);
+    if (toUser == null) {
+      toUser = new User(event.params.to);
+      toUser.balance = BigInt.fromI32(0);
+    }
+    toUser.balance = toUser.balance.plus(event.params.value);
+    toUser.save();
+
+
   }
-  toUser.balance = toUser.balance.plus(event.params.value);
-	toUser.save();
+
+  
+ 
+  
 }
